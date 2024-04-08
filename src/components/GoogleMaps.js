@@ -155,5 +155,5 @@ const MapDisplay = ({ center, googleProp }) => {
 }
    
 export default GoogleApiWrapper({
-apiKey: ('AIzaSyBmBf-1121CDjUXgP2bSmNNImY_93sxTJI')
+apiKey: ('') // Insert your Google Maps API key here
 })(MapContainer)
