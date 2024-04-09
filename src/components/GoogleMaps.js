@@ -1,9 +1,11 @@
 import React, {Component} from 'react';
-import {Map, GoogleMap, Circle, GoogleApiWrapper} from 'google-maps-react';
+import {Map, Circle, GoogleApiWrapper} from 'google-maps-react';
 import PlacesAutocomplete, {
     geocodeByAddress,
     getLatLng,
   } from 'react-places-autocomplete';
+import axios from 'axios';
+
 // import styled from 'styled-components';
 
 // const StartContainer = styled.div`
@@ -83,7 +85,6 @@ export class MapContainer extends Component {
             {/* Conditionally render the map */}
             {this.state.address && (
                 <MapDisplay 
-                    mapContainerStyle = {{width: '10px', height: '10px'}}
                     className="map" 
                     center={this.state.mapCenter} 
                     googleProp = {this.props.google}
@@ -127,6 +128,8 @@ export class MapContainer extends Component {
 const MapDisplay = ({ center, googleProp }) => {
     return (
         <div>
+            <p>Put weather data here</p>
+            <WeatherDisplay center={center} />
             <Map 
                 className='map'
                 style={{ width: '80%', height: '80%', margin: '130px' }}
@@ -153,7 +156,36 @@ const MapDisplay = ({ center, googleProp }) => {
         </div>
     );
 }
+
+function WeatherDisplay({ center }) {
+    const [weather, setWeather] = React.useState(null);
+    //const API_KEY = '';
+
+    React.useEffect(() => {
+        const fetchWeather = async () => {
+            const response = await axios.get(`https://api.openweathermap.org/data/3.0/onecall?lat=${center.lat}&lon=${center.lng}&appid=`);
+                //`http://api.weatherapi.com/v1/current.json?key=&q=${center.lat},${center.lng}`);
+            setWeather(response.data);
+        };
+
+        fetchWeather();
+    }, [center]);
+
+    return (
+        <div>
+            {weather && (
+                <div>
+                    <h2>Weather at {weather.location.name}</h2>
+                    <p>{weather.current.condition.text}</p>
+                    <p>{weather.current.temp_c}°C</p>
+                </div>
+            )}
+        </div>
+    );
+} 
    
 export default GoogleApiWrapper({
-apiKey: ('') // Insert your Google Maps API key here
+apiKey: ('') // TODO: delete before pushing to GitHub
 })(MapContainer)
+
+
