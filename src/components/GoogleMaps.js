@@ -6,12 +6,6 @@ import PlacesAutocomplete, {
   } from 'react-places-autocomplete';
 import axios from 'axios';
 
-// import styled from 'styled-components';
-
-// const StartContainer = styled.div`
-//     margin: 20px;
-// `;
-
 export class MapContainer extends Component {
     constructor(props) {
         super(props);
@@ -128,7 +122,6 @@ export class MapContainer extends Component {
 const MapDisplay = ({ center, googleProp }) => {
     return (
         <div>
-            <p>Put weather data here</p>
             <WeatherDisplay center={center} />
             <Map 
                 className='map'
@@ -159,13 +152,13 @@ const MapDisplay = ({ center, googleProp }) => {
 
 function WeatherDisplay({ center }) {
     const [weather, setWeather] = React.useState(null);
-    //const API_KEY = '';
+    //const API_KEY = 'c0fffbaa1459c29a3f23ff1f9e831050';
 
     React.useEffect(() => {
         const fetchWeather = async () => {
-            const response = await axios.get(`https://api.openweathermap.org/data/3.0/onecall?lat=${center.lat}&lon=${center.lng}&appid=`);
-                //`http://api.weatherapi.com/v1/current.json?key=&q=${center.lat},${center.lng}`);
+            const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${center.lat}&lon=${center.lng}&units=imperial&appid=c0fffbaa1459c29a3f23ff1f9e831050`);
             setWeather(response.data);
+            console.log(response.data);
         };
 
         fetchWeather();
@@ -175,9 +168,13 @@ function WeatherDisplay({ center }) {
         <div>
             {weather && (
                 <div>
-                    <h2>Weather at {weather.location.name}</h2>
-                    <p>{weather.current.condition.text}</p>
-                    <p>{weather.current.temp_c}°C</p>
+                    {/* Insert longitude and latitude here and show that it's the same city */}
+                    <h3>Weather in {weather.name}</h3>
+                    <p>{weather.main.temp}°F</p>
+                    <p>{weather.weather[0].description}</p>
+                    <p>Longitude: {weather.coord.lon} Latitude: {weather.coord.lat}</p>
+                    <h3>Location to Protect</h3>
+                    <p>Longitude: {center.lng} Latitude: {center.lat}</p>
                 </div>
             )}
         </div>
@@ -187,5 +184,3 @@ function WeatherDisplay({ center }) {
 export default GoogleApiWrapper({
 apiKey: ('') // TODO: delete before pushing to GitHub
 })(MapContainer)
-
-
