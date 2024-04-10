@@ -156,7 +156,7 @@ function WeatherDisplay({ center }) {
 
     React.useEffect(() => {
         const fetchWeather = async () => {
-            const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${center.lat}&lon=${center.lng}&units=imperial&appid=c0fffbaa1459c29a3f23ff1f9e831050`);
+            const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${center.lat}&lon=${center.lng}&units=imperial&appid=`);
             setWeather(response.data);
             console.log(response.data);
         };
