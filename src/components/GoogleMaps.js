@@ -14,7 +14,8 @@ export class MapContainer extends Component {
             mapCenter: {
                 lat: 36.174465,
                 lng: -86.767960
-            }
+            },
+            selectCalled: false
         };
     }
 
@@ -29,6 +30,15 @@ export class MapContainer extends Component {
                 console.log('Success', latLng);
                 this.setState({ address });
                 this.setState({ mapCenter: latLng });
+                this.setState({ selectCalled: true })
+
+                // Send coords to Flask backend
+                const send_route = "http://localhost:5000/send_location"
+                axios.post(send_route, { coords: latLng, radius: 1000 })
+                    .then(response => {
+                        console.log('Flask response:', response.data);
+                    })
+                    .catch(error => console.error('Error calling Flask:', error)); 
             })
 
             .catch(error => console.error('Error', error));
@@ -77,7 +87,7 @@ export class MapContainer extends Component {
             </PlacesAutocomplete>
 
             {/* Conditionally render the map */}
-            {this.state.address && (
+            {this.state.selectCalled && (
                 <MapDisplay 
                     className="map" 
                     center={this.state.mapCenter} 
@@ -156,7 +166,31 @@ function WeatherDisplay({ center }) {
 
     React.useEffect(() => {
         const fetchWeather = async () => {
-            const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${center.lat}&lon=${center.lng}&units=imperial&appid=`);
+            var updatedLat = center.lat;
+            var updatedLng = center.lng;
+            // Make a GET request to your Flask backend
+            const check_route = "http://localhost:5000/check_location"
+            const backendResponse = await axios.get(check_route, {
+                params: {
+                    lat: center.lat,
+                    lng: center.lng
+                }
+            }).then(response => {
+                console.log('Flask response:', response.data);
+                // Extract updated lat and lon from backend response
+                updatedLat = response.data.lat;
+                updatedLng = response.data.lng;
+            })
+            .catch(error => console.error('Error calling Flask:', error)); 
+            console.log(updatedLat)
+
+            // Update center state with new values
+            // center({
+            //     lat: updatedLat,
+            //     lng: updatedLon
+            // });
+
+            const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${updatedLat}&lon=${updatedLng}&units=imperial&appid=c0fffbaa1459c29a3f23ff1f9e831050`);
             setWeather(response.data);
             console.log(response.data);
         };
@@ -182,5 +216,5 @@ function WeatherDisplay({ center }) {
 } 
    
 export default GoogleApiWrapper({
-apiKey: ('') // TODO: delete before pushing to GitHub
+apiKey: ('AIzaSyC8Rg1gv03werkpPdxNBEhUr73b-k_wjqc') // TODO: delete before pushing to GitHub
 })(MapContainer)
