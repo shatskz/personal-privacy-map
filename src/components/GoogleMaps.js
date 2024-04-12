@@ -206,9 +206,9 @@ function WeatherDisplay({ center }) {
                     <h3>Weather in {weather.name}</h3>
                     <p>{weather.main.temp}°F</p>
                     <p>{weather.weather[0].description}</p>
-                    <p>Longitude: {weather.coord.lon} Latitude: {weather.coord.lat}</p>
+                    <p>Latitude: {weather.coord.lat} Longitude: {weather.coord.lon}</p>
                     <h3>Location to Protect</h3>
-                    <p>Longitude: {center.lng} Latitude: {center.lat}</p>
+                    <p>Latitude: {center.lat} Longitude: {center.lng}</p>
                 </div>
             )}
         </div>
