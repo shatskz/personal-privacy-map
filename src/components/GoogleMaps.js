@@ -11,6 +11,7 @@ export class MapContainer extends Component {
         super(props);
         this.state = {
             address: '',
+            address2: '',
             mapCenter: {
                 lat: 36.174465,
                 lng: -86.767960
@@ -21,6 +22,10 @@ export class MapContainer extends Component {
 
     handleChange = address => {
         this.setState({ address });
+    };
+
+    handleChange2 = address2 => {
+        this.setState({ address2 });
     };
      
     handleSelect = address => {
@@ -44,6 +49,36 @@ export class MapContainer extends Component {
             .catch(error => console.error('Error', error));
     };
 
+    handleSelect2 = address2 => {
+        geocodeByAddress(address2)
+            .then(results => getLatLng(results[0]))
+            .then(latLng => { 
+                console.log('Success2', latLng);
+                this.setState({ address2 });
+                this.setState({ selectCalled: true })
+
+                // Send coords to Flask backend
+            //     const send_route = "[INSERT FLASK ROUTE HERE]"
+            //     axios.post(send_route, { coords: latLng, radius: 1000 })
+            //         .then(response => {
+            //             console.log('Flask response:', response.data);
+            //         })
+            //         .catch(error => console.error('Error calling Flask:', error)); 
+            })
+
+            .catch(error => console.error('Error', error));
+    };
+
+    // What happens when the clear database button is clicked
+    clearDatabase = async () => {
+        try {
+            const response = await axios.post('[INSERT FLASK ROUTE HERE]');
+            console.log(response.data);
+        } catch (error) {
+            console.error('Error clearing database', error);
+        }
+    };
+
     render() {
         return (
         <div id="googleMap">
@@ -56,7 +91,7 @@ export class MapContainer extends Component {
             <div>
                 <input
                 {...getInputProps({
-                    placeholder: 'Where do you want your location hidden?',
+                    placeholder: 'Location to be hidden',
                     className: 'location-search-input',
                 })}
                 />
@@ -85,6 +120,55 @@ export class MapContainer extends Component {
             </div>
             )}
             </PlacesAutocomplete>
+            
+            {/* For second address */}
+            {/* Only render the second address input after the first address has been selected */}
+            {this.state.selectCalled && (
+                <PlacesAutocomplete
+                    value={this.state.address2}
+                    onChange={this.handleChange2}
+                    onSelect={this.handleSelect2}
+                >
+                {({ getInputProps, suggestions, getSuggestionItemProps, loading }) => (
+                <div>
+                    <input
+                    {...getInputProps({
+                        placeholder: 'Location to be sent to DB',
+                        className: 'location-search-input',
+                    })}
+                    />
+                    <div className="autocomplete-dropdown-container">
+                    {loading && <div>Loading...</div>}
+                    {suggestions.map(suggestion => {
+                        const className = suggestion.active
+                        ? 'suggestion-item--active'
+                        : 'suggestion-item';
+                        // inline style for demonstration purpose
+                        const style = suggestion.active
+                        ? { backgroundColor: '#fafafa', cursor: 'pointer' }
+                        : { backgroundColor: '#ffffff', cursor: 'pointer' };
+                        return (
+                        <div
+                            {...getSuggestionItemProps(suggestion, {
+                            className,
+                            style,
+                            })}
+                        >
+                            <span>{suggestion.description}</span>
+                        </div>
+                        );
+                    })}
+                    </div>
+                </div>
+                )}
+                </PlacesAutocomplete> 
+            )}
+
+            {/* Clear database button */}
+            {/* Change the clearDatabase function to the correct route */}
+            {this.state.selectCalled && (
+                <button onClick={this.clearDatabase}>Clear Database</button>
+            )}
 
             {/* Conditionally render the map */}
             {this.state.selectCalled && (
@@ -96,36 +180,6 @@ export class MapContainer extends Component {
             )}
             </div>
         );
-
-                    {/* <Map 
-                google={this.props.google}
-                initialCenter={{
-                    lat: this.state.mapCenter.lat,
-                    lng: this.state.mapCenter.lng
-                }}
-                center={{
-                    lat: this.state.mapCenter.lat,
-                    lng: this.state.mapCenter.lng
-                }}
-            >
-                <Circle
-                    radius={1000}
-                    center={{
-                        lat: this.state.mapCenter.lat,
-                        lng: this.state.mapCenter.lng
-                    }}
-                    fillColor='#FF0000'
-                    fillOpacity={0.4}
-                />
-                {/* <Marker  
-                    position= {{
-                        lat: this.state.mapCenter.lat,
-                        lng: this.state.mapCenter.lng 
-                    }}
-                />
-            </Map>
-        </div>
-        ) */}
     }
 }
 
@@ -162,7 +216,6 @@ const MapDisplay = ({ center, googleProp }) => {
 
 function WeatherDisplay({ center }) {
     const [weather, setWeather] = React.useState(null);
-    //const API_KEY = 'c0fffbaa1459c29a3f23ff1f9e831050';
 
     React.useEffect(() => {
         const fetchWeather = async () => {
