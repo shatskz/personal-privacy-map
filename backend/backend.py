@@ -1,37 +1,45 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 from math import radians, cos, sin, asin, sqrt, pi
 from geopy import distance
 import random
+import os
 
 app = Flask(__name__)
+db_dir = "backend/locations.db"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.abspath(db_dir)
 CORS(app)
+db = SQLAlchemy(app)
 
-center_coords = {'lat': 0, 'lng': 0}
-radius = 0
+current_coords = {'lat': 0, 'lng': 0}
+
+# Class for Location objects to be stored in the DB
+class Location(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    latitude = db.Column(db.Float, nullable = False)
+    longitude = db.Column(db.Float, nullable = False)
+    radius = db.Column(db.Integer, nullable = False)
+
+    def __init__(self, latitude, longitude, radius):
+        self.latitude = latitude
+        self.longitude = longitude
+        self.radius = radius
 
 # Calculate the distance between points to see if they are within circle radius
-def distance_check(current_coords):
-    # # Convert decimal degrees to radians
-    # lat1, lng1 = center_coords['lat'], center_coords['lng']
-    # lat2, lng2 = current_coords['lat'], current_coords['lng']
-    # lat1, lng1, lat2, lng2 = map(radians, [lat1, lng1, lat2, lng2])
-
-    # # Haversine formula
-    # lat_diff = lat2 - lat1
-    # lng_diff = lng2 - lng1 
-    # a = sin(lat_diff/2)**2 + cos(lat1) * cos(lat2) * sin(lng_diff/2)**2
-    # c = 2 * asin(sqrt(a)) 
-    # r = 6371 # Radius of earth in kilometers
-    # # Return whether or not the distance is less than the radius
-    # return (c * r) < radius
-
-    center_coords_tuple = tuple(center_coords.values())
-    dist = distance.distance(center_coords_tuple, current_coords).km
-    return dist <= radius
+def distance_check(loc):
+    current_coords_tuple = tuple(current_coords.values())
+    center_coords_tuple = (loc['latitude'], loc['longitude'])
+    dist = distance.distance(center_coords_tuple, current_coords_tuple).km
+    return dist <= loc['radius']
 
 # Compute new coordinates to return
-def new_coords():
+def new_coords(loc):
+    # Extract values from loc
+    radius = loc['radius']
+    lat = loc['latitude']
+    lng = loc['longitude']
+
     # Randomly pick amount to change latitude
     lat_diff = random.uniform(-radius, radius)
     # Randomly pick amount to change longitude staying within radius
@@ -40,55 +48,92 @@ def new_coords():
 
     # Get the conversion factors for km to latitude
     lat_km = 111
-    lng_km = 111 * cos(center_coords['lat'] * (pi / 180))
+    lng_km = 111 * cos(lat * (pi / 180))
 
     # Add the converted values to the center coords
-    new_lat = center_coords['lat'] + (lat_diff / lat_km)
-    new_lng = center_coords['lng'] + (lng_diff / lng_km)
-    # print(lat_diff, lng_diff)
+    new_lat = lat + (lat_diff / lat_km)
+    new_lng = lng + (lng_diff / lng_km)
 
     return new_lat, new_lng
 
-
+# Send the entered location to be stored locally
 @app.route('/send_location', methods=['POST'])
 def send_location():
     # Extract data from the request
     data = request.json
-    coords = data['coords']
-    # Save coordinates as center
-    center_coords['lat'] = coords['lat']
-    center_coords['lng'] = coords['lng']
-    # Save radius and convert from meters to kilometers
-    global radius
-    radius = data['radius'] / 1000
-    print(center_coords)
-    print(radius)
+    # Save coordinates locally
+    current_coords['lat'] = data['coords']['lat']
+    current_coords['lng'] = data['coords']['lng']
+    print(current_coords)
 
-    # Return a response if needed
     return jsonify({'message': 'Success'})
 
+# Save the entered location into the database
+@app.route('/save_location', methods=['POST'])
+def save_location():
+    data = request.json
+    lat = data['coords']['lat']
+    lng = data['coords']['lng']
+    radius = data['radius'] / 1000
+    # Create new Location object and insert it into the DB
+    location = Location(lat, lng, radius)
+    db.session.add(location)
+    db.session.commit()
 
+    return jsonify({'message': 'Success'})
+
+# Clear all the data in the database
+@app.route('/clear_db', methods=['POST'])
+def clear_db():
+    meta = db.metadata
+    for table in reversed(meta.sorted_tables):
+        db.session.execute(table.delete())
+    db.session.commit()
+
+    return jsonify({'message': 'Success'})
+
+# Check to see if the stored location matches any database entries
 @app.route('/check_location', methods=['GET'])
 def check_location():
-    # Extract data from the request
-    print("test")
-    # data = request.args.get
-    # print(request.args)
-    lat = request.args.get('lat')
-    lng = request.args.get('lng')
-    print(lat, lng)
+    lat = current_coords['lat']
+    lng = current_coords['lng']
+    print("Entered location coordinates:", lat, lng)
 
-    if distance_check((lat, lng)):
-        # print("Current coords are within radius of center coords.")
-        # print("Randomly shifting coordinates...")
-        lat, lng = new_coords()
-        print(lat, lng)
-        if not distance_check((lat, lng)):
-            print("Computation went wrong...")
+    # Get all the location data from the DB
+    locations = Location.query.all()
+    # Put all the location data into a list of Location objects in a serialized JSON format
+    location_list = []
+    for location in locations:
+        location_data = {
+            'id': location.id,
+            'latitude': location.latitude,
+            'longitude': location.longitude,
+            'radius': location.radius
+        }
+        location_list.append(location_data)
+
+    # print(location_list)
+    modified = False # Test var
+
+    for loc in location_list:
+        if distance_check(loc):
+            print("Current coords are within radius of saved coords.")
+            lat, lng = new_coords(loc)
+            if not distance_check((loc)):
+                print("Computation went wrong...")
+            modified = True
+            print("New modified coordinates:", lat, lng)
+            break
+    
+    if not modified:
+        print("Coordinates not modified")
 
     # Return a response if needed
     return jsonify({'lat': lat, 'lng': lng})
 
 
 if __name__ == '__main__':
+    # Create the table in the DB
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)

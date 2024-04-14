@@ -57,13 +57,13 @@ export class MapContainer extends Component {
                 this.setState({ address2 });
                 this.setState({ selectCalled: true })
 
-                // Send coords to Flask backend
-            //     const send_route = "[INSERT FLASK ROUTE HERE]"
-            //     axios.post(send_route, { coords: latLng, radius: 1000 })
-            //         .then(response => {
-            //             console.log('Flask response:', response.data);
-            //         })
-            //         .catch(error => console.error('Error calling Flask:', error)); 
+                // Save coords to Flask backend
+                const save_route = "http://localhost:5000/save_location"
+                axios.post(save_route, { coords: latLng, radius: 1000 })
+                    .then(response => {
+                        console.log('Flask response:', response.data);
+                    })
+                    .catch(error => console.error('Error calling Flask:', error)); 
             })
 
             .catch(error => console.error('Error', error));
@@ -72,7 +72,8 @@ export class MapContainer extends Component {
     // What happens when the clear database button is clicked
     clearDatabase = async () => {
         try {
-            const response = await axios.post('[INSERT FLASK ROUTE HERE]');
+            const clear_route = "http://localhost:5000/clear_db";
+            const response = await axios.post(clear_route);
             console.log(response.data);
         } catch (error) {
             console.error('Error clearing database', error);
@@ -223,25 +224,13 @@ function WeatherDisplay({ center }) {
             var updatedLng = center.lng;
             // Make a GET request to your Flask backend
             const check_route = "http://localhost:5000/check_location"
-            const backendResponse = await axios.get(check_route, {
-                params: {
-                    lat: center.lat,
-                    lng: center.lng
-                }
-            }).then(response => {
-                console.log('Flask response:', response.data);
+            const backendResponse = await axios.get(check_route).then(response => {
+                console.log('Flask updated response:', response.data);
                 // Extract updated lat and lon from backend response
                 updatedLat = response.data.lat;
                 updatedLng = response.data.lng;
             })
             .catch(error => console.error('Error calling Flask:', error)); 
-            console.log(updatedLat)
-
-            // Update center state with new values
-            // center({
-            //     lat: updatedLat,
-            //     lng: updatedLon
-            // });
 
             const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${updatedLat}&lon=${updatedLng}&units=imperial&appid=c0fffbaa1459c29a3f23ff1f9e831050`);
             setWeather(response.data);
