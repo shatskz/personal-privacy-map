@@ -3,27 +3,36 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from math import radians, cos, sin, asin, sqrt, pi
 from geopy import distance
+from cryptography.fernet import Fernet
 import random
+import struct
 import os
 
+# App/DB setup
 app = Flask(__name__)
 db_dir = "backend/locations.db"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.abspath(db_dir)
 CORS(app)
 db = SQLAlchemy(app)
 
+# Cryptography generation for DB
+key = Fernet.generate_key()
+f = Fernet(key)
+
+# Variable for currently entered location
 current_coords = {'lat': 0, 'lng': 0}
 
 # Class for Location objects to be stored in the DB
 class Location(db.Model):
     id = db.Column(db.Integer, primary_key = True)
-    latitude = db.Column(db.Float, nullable = False)
-    longitude = db.Column(db.Float, nullable = False)
+    latitude = db.Column(db.LargeBinary, nullable = False)
+    longitude = db.Column(db.LargeBinary, nullable = False)
     radius = db.Column(db.Integer, nullable = False)
 
     def __init__(self, latitude, longitude, radius):
-        self.latitude = latitude
-        self.longitude = longitude
+        # Encrypt the latitude and longitude coordinates as they are stored
+        self.latitude = f.encrypt(struct.pack('f', latitude))
+        self.longitude = f.encrypt(struct.pack('f', longitude))
         self.radius = radius
 
 # Calculate the distance between points to see if they are within circle radius
@@ -56,6 +65,13 @@ def new_coords(loc):
 
     return new_lat, new_lng
 
+# Clear the db
+def reset_db():
+    meta = db.metadata
+    for table in reversed(meta.sorted_tables):
+        db.session.execute(table.delete())
+    db.session.commit()
+
 # Send the entered location to be stored locally
 @app.route('/send_location', methods=['POST'])
 def send_location():
@@ -80,15 +96,26 @@ def save_location():
     db.session.add(location)
     db.session.commit()
 
+    # Get all the location data from the DB
+    locations = Location.query.all()
+    # Put all the location data into a list of Location objects in a serialized JSON format
+    location_list = []
+    for location in locations:
+        location_data = {
+            'id': location.id,
+            'latitude': location.latitude,
+            'longitude': location.longitude,
+            'radius': location.radius
+        }
+        location_list.append(location_data)
+    print(location_list)
+
     return jsonify({'message': 'Success'})
 
 # Clear all the data in the database
 @app.route('/clear_db', methods=['POST'])
 def clear_db():
-    meta = db.metadata
-    for table in reversed(meta.sorted_tables):
-        db.session.execute(table.delete())
-    db.session.commit()
+    reset_db()
 
     return jsonify({'message': 'Success'})
 
@@ -102,17 +129,18 @@ def check_location():
     # Get all the location data from the DB
     locations = Location.query.all()
     # Put all the location data into a list of Location objects in a serialized JSON format
+    # Decrypt the encrypted coordinates stored in the database
     location_list = []
     for location in locations:
         location_data = {
             'id': location.id,
-            'latitude': location.latitude,
-            'longitude': location.longitude,
+            'latitude': struct.unpack('f', f.decrypt(location.latitude))[0],
+            'longitude': struct.unpack('f', f.decrypt(location.longitude))[0],
             'radius': location.radius
         }
         location_list.append(location_data)
 
-    # print(location_list)
+    print(location_list)
     modified = False # Test var
 
     for loc in location_list:
@@ -136,4 +164,5 @@ if __name__ == '__main__':
     # Create the table in the DB
     with app.app_context():
         db.create_all()
+        reset_db()
     app.run(debug=True)
