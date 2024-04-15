@@ -217,20 +217,18 @@ const MapDisplay = ({ center, googleProp }) => {
 
 function WeatherDisplay({ center }) {
     const [weather, setWeather] = React.useState(null);
+    var updatedLat = center.lat;
+    var updatedLng = center.lng;
 
     React.useEffect(() => {
         const fetchWeather = async () => {
-            var updatedLat = center.lat;
-            var updatedLng = center.lng;
+            
             // Make a GET request to your Flask backend
             const check_route = "http://localhost:5000/check_location"
-            const backendResponse = await axios.get(check_route).then(response => {
-                console.log('Flask updated response:', response.data);
-                // Extract updated lat and lon from backend response
-                updatedLat = response.data.lat;
-                updatedLng = response.data.lng;
-            })
-            .catch(error => console.error('Error calling Flask:', error)); 
+            const backendResponse = await axios.get(check_route)
+            console.log('Flask updated response:', backendResponse.data);
+            updatedLat = backendResponse.data.lat;
+            updatedLng = backendResponse.data.lng;
 
             const response = await axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${updatedLat}&lon=${updatedLng}&units=imperial&appid=c0fffbaa1459c29a3f23ff1f9e831050`);
             setWeather(response.data);
@@ -238,7 +236,7 @@ function WeatherDisplay({ center }) {
         };
 
         fetchWeather();
-    }, [center]);
+    }, [center, updatedLat, updatedLng]);
 
     return (
         <div>
@@ -258,5 +256,5 @@ function WeatherDisplay({ center }) {
 } 
    
 export default GoogleApiWrapper({
-apiKey: ('AIzaSyC8Rg1gv03werkpPdxNBEhUr73b-k_wjqc') // TODO: delete before pushing to GitHub
+apiKey: ('') // TODO: delete before pushing to GitHub
 })(MapContainer)
