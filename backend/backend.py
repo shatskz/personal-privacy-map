@@ -7,6 +7,7 @@ from cryptography.fernet import Fernet
 import random
 import struct
 import os
+# import timeit, pickle
 
 # App/DB setup
 app = Flask(__name__)
@@ -21,6 +22,10 @@ f = Fernet(key)
 
 # Variable for currently entered location
 current_coords = {'lat': 0, 'lng': 0}
+
+# file_name = "db_no_matches_5.pkl"
+# times_file = os.path.join("backend/data", file_name)
+# times = []
 
 # Class for Location objects to be stored in the DB
 class Location(db.Model):
@@ -122,6 +127,10 @@ def clear_db():
 # Check to see if the stored location matches any database entries
 @app.route('/check_location', methods=['GET'])
 def check_location():
+    # Start time
+    # start = timeit.default_timer()
+    # print("start", start)
+
     lat = current_coords['lat']
     lng = current_coords['lng']
     print("Entered location coordinates:", lat, lng)
@@ -147,8 +156,6 @@ def check_location():
         if distance_check(loc):
             print("Current coords are within radius of saved coords.")
             lat, lng = new_coords(loc)
-            if not distance_check((loc)):
-                print("Computation went wrong...")
             modified = True
             print("New modified coordinates:", lat, lng)
             break
@@ -156,6 +163,12 @@ def check_location():
     if not modified:
         print("Coordinates not modified")
 
+    # times.append(timeit.default_timer() - start)
+    # if len(times) == 12:
+    #     with open(times_file, 'wb') as file:
+    #         pickle.dump(times[2:], file)
+    #     print("file written")
+    # print(len(times))
     # Return a response if needed
     return jsonify({'lat': lat, 'lng': lng})
 
