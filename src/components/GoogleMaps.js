@@ -256,5 +256,5 @@ function WeatherDisplay({ center }) {
 } 
    
 export default GoogleApiWrapper({
-apiKey: ('') // TODO: delete before pushing to GitHub
+apiKey: ('') // TODO: Enter Google Maps API key
 })(MapContainer)

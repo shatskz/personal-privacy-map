@@ -127,7 +127,7 @@ def clear_db():
 # Check to see if the stored location matches any database entries
 @app.route('/check_location', methods=['GET'])
 def check_location():
-    # Start time
+    ### TIMING DATA - Start time
     # start = timeit.default_timer()
     # print("start", start)
 
@@ -163,12 +163,13 @@ def check_location():
     if not modified:
         print("Coordinates not modified")
 
+    ### TIMING DATA - End time
     # times.append(timeit.default_timer() - start)
     # if len(times) == 12:
     #     with open(times_file, 'wb') as file:
     #         pickle.dump(times[2:], file)
     #     print("file written")
-    # print(len(times))
+
     # Return a response if needed
     return jsonify({'lat': lat, 'lng': lng})
 
